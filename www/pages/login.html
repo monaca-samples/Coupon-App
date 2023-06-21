@@ -1,0 +1,90 @@
+<template>
+    <div class="page">
+        <div class="page-content">
+            <div class="page login-screen-page">
+                <div class="page-content login-screen-content">
+                    <div class="login-screen-title">Login / Sign Up</div>
+                    <form>
+                        <div class="list">
+                            <ul>
+                                <li class="item-content item-input">
+                                    <div class="item-inner">
+                                        <div class="item-title item-label">Username</div>
+                                        <div class="item-input-wrap">
+                                            <input type="text" name="username" id="username"
+                                                placeholder="Your username" />
+                                            <span class="input-clear-button"></span>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="item-content item-input">
+                                    <div class="item-inner">
+                                        <div class="item-title item-label">Password</div>
+                                        <div class="item-input-wrap">
+                                            <input type="password" name="password" id="password"
+                                                placeholder="Your password" />
+                                            <span class="input-clear-button"></span>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="list inset">
+                            <ul>
+                                <li><a class="list-button" id="loginBtn" @click=${signInOrLogin}>Log In / Sign Up</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+<script>
+    export default (props, { $f7router, $f7 }) => {
+
+        // Event when you tap the login/signup button
+        const signInOrLogin = async () => {
+            // Input values are converted to an object
+            const params = serializeForm('form#login');
+            // User registration process   
+            try {
+                await registerUser(params);
+            } catch (e) {
+                //Results to error if the user is already registered, ignore and proceed
+            }
+            try {
+                // User login process
+                await loginUser(params);
+                // Navigate back to the main screen
+                $f7router.back();
+            } catch (e) {
+                // If the was a problem alert the user
+                console.log(e);
+                $f7.dialog.alert('Login failed. Please check username and password.');
+            }
+        }
+
+        // User registration
+        const registerUser = async (params) => {
+            try {
+                const user = new ncmb.User;
+                user
+                    .set('userName', params.userName)
+                    .set('password', params.password)
+                await user.signUpByAccount();
+                return user;
+            } catch (e) {
+                console.log(e);
+            }
+        }
+
+        const loginUser = async (params) => {
+            // Login the user
+            return ncmb.User.login(params.userName, params.password);
+        }
+
+        return $render;
+    }
+</script>

@@ -1,0 +1,88 @@
+<template>
+    <div class="page">
+        <div class="navbar">
+            <div class="navbar-bg"></div>
+            <div class="navbar-inner">
+                <div class="left">
+                    <a href="/list/" class="link back">
+                        <i class="icon icon-back"></i>
+                        <span>Back</span>
+                    </a>
+                </div>
+                <div class="title">List of Coupons</div>
+                <div class="right">
+                    <a href="/admin/form/" class="link">
+                        <i class="f7-icons">plus</i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="page-content">
+            <div class="card data-table coupons">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="label-cell">Name</th>
+                            <th class="label-cell">Discount</th>
+                            <th class="label-cell">Start Date</th>
+                            <th class="label-cell">End Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</template>
+<script>
+    export default (props, { $on, $f7, $f7router }) => {
+
+        let coupons;
+        // Even executed before screen display
+        $on('pageBeforeIn', async (e, page) => {
+            // Coupon data acquisition
+            coupons = await getCoupons();
+            // List acquired coupons
+            showCoupons();
+            // Bind events to coupon information drawn
+            bindCoupons();
+        });
+
+        const getCoupons = () => {
+            const Coupon = ncmb.DataStore('Coupon');
+            return Coupon
+                .limit(100)
+                .order('createDate')
+                .fetchAll();
+        }
+
+        // List acquired coupons
+        const showCoupons = () => {
+            $f7.$el.find('.coupons table tbody').html(coupons.map(c => `
+                        <tr data-object-id="${c.objectId}">
+                        <td class="label-cell">${c.couponName}</td>
+                        <td class="label-cell">${c.discount}</td>
+                        <td class="label-cell">${dayjs(c.startDate.iso).format('M/D')}</td>
+                        <td class="label-cell">${dayjs(c.endDate.iso).format('M/D')}</td>
+                        </tr>`).join(''));
+        }
+
+        // Bind events to coupon information drawn
+        const bindCoupons = () => {
+            // Event when tapping data in a row
+            $f7.$el.find('.coupons table tbody tr').on('click', e => {
+                // Obtain objectId, a unique key
+                const objectId = $(e.target).parents('tr').data('object-id');
+                // Retrieve data to be edited
+                coupon = coupons.find(c => c.objectId === objectId);
+                // Send to edit screen
+                $f7router.navigate('/admin/form/', {
+                    props: { coupon },
+                });
+            });
+        }
+
+    return $render;
+    }
+</script>

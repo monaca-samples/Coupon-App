@@ -1,0 +1,138 @@
+<template>
+    <div class="page">
+        <div class="navbar">
+            <div class="navbar-bg"></div>
+            <div class="navbar-inner sliding">
+                <div class="title">Available Coupons</div>
+                <div class="right">
+                    <a href="/admin/list/" class="link admin">
+                        <i class="f7-icons">gear</i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="page-content">
+            <div class="use-coupons">
+
+            </div>
+            <div class="sheet-modal demo-sheet-push coupon">
+                <div class="toolbar">
+                    <div class="toolbar-inner">
+                        <div class="left"></div>
+                        <div class="right">
+                            <a class="link sheet-close">Close</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="sheet-modal-inner">
+                    <div class="page-content">
+                        <div class="block">
+                            <h2></h2>
+                            <p>Please show the following to the stuff</p>
+                            <strong></strong>
+                            <hr />
+                            <br />
+                            <div style="padding-left: 50px;">
+                                <img id="barcode" style="width:50%;" class="margin-right float-left"></img>
+                                <div id="qrcode"></div>
+                            </div>
+                            <br />
+                            <hr />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+<script>
+    export default (props, { $f7, $on, $f7router }) => {
+
+        let coupons;
+        // Event executed during page initialization
+        $on('pageBeforeIn', async (e, page) => {
+            // Authentication status check
+            if (!(await checkAuth())) {
+                // If false is returned, got to login screen
+                $f7router.navigate({ name: 'Login' });
+            }
+            // Change the visibility of the admin settings
+            changeVisible($f7.$el)
+            // Get the valid coupons
+            coupons = await getCoupons()
+            // Display the valid coupons
+            displayCoupons()
+            // Set a click event
+            setClickEvent()
+        });
+
+        // Function to retrieve valid coupons
+        const getCoupons = async () => {
+            // Target data store
+            const Coupon = ncmb.DataStore('Coupon');
+            return Coupon
+                .limit(100)                                 // 100 coupons is the limit
+                .lessThanOrEqualTo('startDate', new Date)  // start date is before or equal to today
+                .greaterThanOrEqualTo('endDate', new Date) // end date is later or equal to today
+                .order('createDate')
+                .fetchAll();
+        };
+
+        const displayCoupons = () => {
+            $f7.$el.find('.use-coupons').html(coupons.map(c => `
+                    <div class="card card-outline-md demo-card-header-pic" data-object-id="${c.objectId}">
+                    <div style="color:${c.letterColor};font-size:20px;font-weight:bold;height:140px;" valign="bottom"
+                         class="card-header photo" data-file-name="${c.fileName}">${c.couponName}</div>
+                    <div class="card-content card-content-padding" style="background-color: ${c.backgroundColor};color: ${c.letterColor}">
+                        <p class="date"> Valid until ${dayjs(c.endDate.iso).format('YYYY/M/D')}!</p>
+                        <p>Discount: ${c.discount}%</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="#" class="show-coupon link">Use</a>
+                    </div>
+                    </div>
+            `));
+            displayImage();
+        }
+
+        const setClickEvent = () => {
+            $f7.$el.find('.show-coupon').on('click', (e) => {
+                const objectId = $(e.target).parents('.card').data('object-id');
+                const coupon = coupons.find(c => c.objectId === objectId);
+                $('.sheet-modal-inner h2').text(coupon.couponName);
+                $('.sheet-modal-inner strong').text(coupon.discount + "% discount");
+                JsBarcode("#barcode", coupon.objectId);
+                new QRCode(document.getElementById("qrcode"), {
+                    text: coupon.objectId,
+                    width: 50,
+                    height: 50,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                app.sheet.open('.coupon')
+            });
+        }
+
+        const displayImage = () => {
+            $f7.$el.find('.use-coupons .photo').forEach(ele => {
+                const fileName = $(ele).data('file-name');
+                ncmb.File.download(fileName, 'blob')
+                    .then(async (data) => {
+                        const blob = await photoReader(data);
+                        $(ele).css({
+                            "background-image": `url('${blob}')`
+                        })
+                    });
+            });
+        }
+
+        $on('pageBeforeRemove', () => {
+            app.sheet.destroy();
+        })
+
+
+        return $render;
+    }
+
+</script>
